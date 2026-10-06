@@ -489,7 +489,7 @@ function closeRealtime() {
   setPartnerOnline(false);
 }
 
-function initRealtime(nextRoom = null, nextRole = null) {
+function initRealtime(nextRoom = null, nextRole = null, allowFallback = true) {
   closeRealtime();
   const invitedRoom = getRoomFromUrl();
   state.invitedByUrl = Boolean(invitedRoom);
@@ -506,7 +506,14 @@ function initRealtime(nextRoom = null, nextRole = null) {
     return;
   }
 
-  const peer = state.role === "host" ? new Peer(state.room) : new Peer();
+  const peerOptions = {
+    debug: 1,
+    secure: true,
+    host: "0.peerjs.com",
+    port: 443,
+    path: "/",
+  };
+  const peer = state.role === "host" ? new Peer(state.room, peerOptions) : new Peer(undefined, peerOptions);
   state.peer = peer;
 
   peer.on("open", () => {
@@ -521,9 +528,19 @@ function initRealtime(nextRoom = null, nextRole = null) {
 
   peer.on("connection", attachConnection);
   peer.on("error", (error) => {
+    if (state.role === "host" && allowFallback) {
+      const fallbackRoom = makeRoomCode();
+      state.room = fallbackRoom;
+      updateRoomDisplay();
+      saveSettings();
+      setSyncStatus("Ese código no abrió. Creé uno nuevo: copia el link actualizado.");
+      initRealtime(fallbackRoom, "host", false);
+      return;
+    }
+
     const text = error?.type === "unavailable-id"
       ? "Esa sala ya está abierta en otra pestaña"
-      : "No se pudo abrir la sala online";
+      : "No se pudo abrir la sala online. Prueba recargar o cambiar el código de sala.";
     setSyncStatus(text, true);
   });
 
@@ -1088,6 +1105,7 @@ applyRoom.addEventListener("click", () => {
   } else {
     saveStatus.textContent = "Nombre de mesa guardado";
   }
+  setSetupVisible(false);
 });
 
 addReward.addEventListener("click", addRewardRule);
