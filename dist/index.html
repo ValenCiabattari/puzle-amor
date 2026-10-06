@@ -94,9 +94,14 @@
               <span class="avatar love">A</span>
               <span>
                 <strong>Tu pareja</strong>
-                <small>lista para invitar</small>
+                <small id="partnerStatus">lista para invitar</small>
               </span>
             </div>
+          </div>
+
+          <div class="sync-card">
+            <span class="dot"></span>
+            <span id="syncStatus">Preparando sala online...</span>
           </div>
 
           <div class="progress-card">
@@ -184,8 +189,8 @@
           <div class="note">
             <strong>Modo pareja</strong>
             <p>
-              Esta primera mesa guarda en este dispositivo. La siguiente capa conecta esta sala a una base en
-              tiempo real para que ambos vean cada movimiento.
+              Copia el link de sala y envíaselo. Al entrar, la otra persona recibe la foto, el progreso y cada
+              movimiento en vivo.
             </p>
           </div>
         </aside>
@@ -208,6 +213,7 @@
       </section>
     </main>
 
+    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

@@ -24,7 +24,11 @@ const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const chatMessages = document.querySelector("#chatMessages");
 const userCursor = document.querySelector("#userCursor");
+const partnerCursor = document.querySelector("#partnerCursor");
 const boardWrap = document.querySelector(".board-wrap");
+const partnerStatus = document.querySelector("#partnerStatus");
+const syncStatus = document.querySelector("#syncStatus");
+const syncCard = document.querySelector(".sync-card");
 
 const state = {
   imageData: "",
@@ -46,12 +50,193 @@ const state = {
   audioContext: null,
   musicTimer: 0,
   musicStep: 0,
+  role: "host",
+  peer: null,
+  conn: null,
+  peerReady: false,
+  lastCursorSent: 0,
 };
 
 function makeRoomCode() {
-  const words = ["LUNA", "SOL", "ROMA", "MATE", "BESO", "VIAJE"];
+  const words = ["luna", "sol", "roma", "mate", "beso", "viaje"];
   const word = words[Math.floor(Math.random() * words.length)];
-  return `${word}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const random = crypto.getRandomValues(new Uint32Array(1))[0].toString(36).slice(0, 5);
+  return `puzle-amor-${word}-${random}`;
+}
+
+function getRoomFromUrl() {
+  return new URLSearchParams(window.location.search).get("room");
+}
+
+function getShareUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("room", state.room);
+  return url.toString();
+}
+
+function setSyncStatus(text, offline = false) {
+  syncStatus.textContent = text;
+  syncCard.classList.toggle("offline", offline);
+}
+
+function setPartnerOnline(online) {
+  partnerStatus.textContent = online ? "conectada en vivo" : "lista para invitar";
+}
+
+function getSnapshot() {
+  return {
+    imageData: state.imageData,
+    pieces: state.pieces.map(({ id, row, col, x, y, targetX, targetY, width, height, locked }) => ({
+      id,
+      row,
+      col,
+      x,
+      y,
+      targetX,
+      targetY,
+      width,
+      height,
+      locked,
+    })),
+    rows: state.rows,
+    cols: state.cols,
+    board: state.board,
+    room: state.room,
+    pieceCount: pieceCount.value,
+  };
+}
+
+function sendRealtime(type, payload) {
+  if (!state.conn?.open) return;
+  state.conn.send({ type, payload });
+}
+
+function getPlayerName() {
+  return state.role === "host" ? "Valentino" : "Tu pareja";
+}
+
+async function applySnapshot(snapshot, message = "Sala sincronizada") {
+  if (!snapshot?.imageData || !snapshot?.pieces?.length) return;
+  state.imageData = snapshot.imageData;
+  state.image = await loadImage(snapshot.imageData);
+  state.pieces = snapshot.pieces;
+  state.rows = snapshot.rows;
+  state.cols = snapshot.cols;
+  state.board = snapshot.board;
+  state.room = snapshot.room || state.room;
+  pieceCount.value = snapshot.pieceCount || String(snapshot.pieces.length);
+  roomCode.textContent = state.room;
+  emptyState.classList.add("hidden");
+  fileName.textContent = "Foto sincronizada en la sala";
+  updateProgress();
+  persist();
+  draw();
+  saveStatus.textContent = message;
+}
+
+async function handleRealtimeData(message) {
+  if (!message?.type) return;
+
+  if (message.type === "snapshot") {
+    await applySnapshot(message.payload);
+  }
+
+  if (message.type === "request-snapshot" && state.imageData && state.pieces.length) {
+    sendRealtime("snapshot", getSnapshot());
+  }
+
+  if (message.type === "piece") {
+    const incoming = message.payload;
+    const piece = state.pieces.find((item) => item.id === incoming.id);
+    if (!piece) return;
+    piece.x = incoming.x;
+    piece.y = incoming.y;
+    piece.locked = incoming.locked;
+    updateProgress();
+    persist();
+    draw();
+  }
+
+  if (message.type === "reset") {
+    localStorage.removeItem(STORAGE_KEY);
+    state.imageData = "";
+    state.image = null;
+    state.pieces = [];
+    state.selectedId = null;
+    fileName.textContent = "La imagen se queda en tu navegador.";
+    emptyState.classList.remove("hidden");
+    updateProgress();
+    draw();
+    saveStatus.textContent = "Mesa reiniciada por la sala";
+  }
+
+  if (message.type === "chat") {
+    appendChatMessage(message.payload.name, message.payload.text);
+  }
+
+  if (message.type === "cursor") {
+    partnerCursor.style.display = "flex";
+    partnerCursor.style.left = `${message.payload.x * 100}%`;
+    partnerCursor.style.top = `${message.payload.y * 100}%`;
+  }
+
+  if (message.type === "celebrate") {
+    launchCelebration(message.payload.x, message.payload.y, message.payload.amount || 36);
+    playSoftPop();
+  }
+}
+
+function attachConnection(conn) {
+  state.conn = conn;
+  setSyncStatus("Conectando con tu pareja...");
+  conn.on("open", () => {
+    setPartnerOnline(true);
+    setSyncStatus("Sala online: movimientos en vivo");
+    if (state.role === "host" && state.imageData && state.pieces.length) {
+      sendRealtime("snapshot", getSnapshot());
+    } else {
+      sendRealtime("request-snapshot", {});
+    }
+  });
+  conn.on("data", handleRealtimeData);
+  conn.on("close", () => {
+    setPartnerOnline(false);
+    setSyncStatus("La otra persona se desconectó", true);
+  });
+  conn.on("error", () => setSyncStatus("No se pudo mantener la conexión", true));
+}
+
+function initRealtime() {
+  const invitedRoom = getRoomFromUrl();
+  state.role = invitedRoom ? "guest" : "host";
+  state.room = invitedRoom || makeRoomCode();
+  roomCode.textContent = state.room;
+
+  if (!window.Peer) {
+    setSyncStatus("Modo local: no cargó la conexión online", true);
+    return;
+  }
+
+  const peer = state.role === "host" ? new Peer(state.room) : new Peer();
+  state.peer = peer;
+
+  peer.on("open", () => {
+    state.peerReady = true;
+    if (state.role === "host") {
+      setSyncStatus("Sala lista: copia el link para invitar");
+    } else {
+      setSyncStatus("Entrando a la sala...");
+      attachConnection(peer.connect(state.room, { reliable: true }));
+    }
+  });
+
+  peer.on("connection", attachConnection);
+  peer.on("error", (error) => {
+    const text = error?.type === "unavailable-id"
+      ? "Esa sala ya está abierta en otra pestaña"
+      : "No se pudo abrir la sala online";
+    setSyncStatus(text, true);
+  });
 }
 
 function resizeCanvas() {
@@ -159,11 +344,11 @@ async function startPuzzle() {
   state.image = await loadImage(state.imageData);
   fitBoard();
   createPieces(Number(pieceCount.value));
-  state.room = makeRoomCode();
   roomCode.textContent = state.room;
   emptyState.classList.add("hidden");
   updateProgress();
   persist();
+  sendRealtime("snapshot", getSnapshot());
   draw();
 }
 
@@ -457,7 +642,7 @@ async function restore() {
     state.rows = saved.rows;
     state.cols = saved.cols;
     state.board = saved.board;
-    state.room = saved.room || makeRoomCode();
+    state.room = state.room || saved.room || makeRoomCode();
     pieceCount.value = saved.pieceCount || String(saved.pieces.length);
     roomCode.textContent = state.room;
     emptyState.classList.add("hidden");
@@ -482,6 +667,15 @@ function updateUserCursor(event) {
   userCursor.style.display = "flex";
   userCursor.style.left = `${event.clientX - rect.left}px`;
   userCursor.style.top = `${event.clientY - rect.top}px`;
+
+  const now = Date.now();
+  if (now - state.lastCursorSent > 80) {
+    state.lastCursorSent = now;
+    sendRealtime("cursor", {
+      x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
+    });
+  }
 }
 
 imageInput.addEventListener("change", async (event) => {
@@ -505,12 +699,13 @@ resetPuzzle.addEventListener("click", () => {
   emptyState.classList.remove("hidden");
   updateProgress();
   draw();
+  sendRealtime("reset", {});
   saveStatus.textContent = "Mesa reiniciada";
 });
 
 copyRoom.addEventListener("click", async () => {
-  await navigator.clipboard?.writeText(state.room);
-  saveStatus.textContent = "Código copiado";
+  await navigator.clipboard?.writeText(getShareUrl());
+  saveStatus.textContent = "Link de sala copiado";
 });
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -556,6 +751,12 @@ canvas.addEventListener("pointerup", () => {
   if (state.selectedId !== null) {
     const piece = state.pieces.find((item) => item.id === state.selectedId);
     if (piece) snapIfClose(piece);
+    if (piece) sendRealtime("piece", {
+      id: piece.id,
+      x: piece.x,
+      y: piece.y,
+      locked: piece.locked,
+    });
     state.selectedId = null;
     scheduleSave();
   }
@@ -605,30 +806,44 @@ celebrateButton.addEventListener("click", () => {
     state.board.y + state.board.height / 2,
     46,
   );
+  sendRealtime("celebrate", {
+    x: state.board.x + state.board.width / 2,
+    y: state.board.y + state.board.height / 2,
+    amount: 46,
+  });
   playSoftPop();
   saveStatus.textContent = "Celebración enviada";
 });
 
-chatForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const message = chatInput.value.trim();
-  if (!message) return;
-  const item = document.createElement("p");
-  item.innerHTML = `<strong>Valentino</strong> ${message.replace(/[&<>"']/g, (char) => ({
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
     '"': "&quot;",
     "'": "&#039;",
-  })[char])}`;
+  })[char]);
+}
+
+function appendChatMessage(name, text) {
+  const item = document.createElement("p");
+  item.innerHTML = `<strong>${escapeHtml(name)}</strong> ${escapeHtml(text)}`;
   chatMessages.appendChild(item);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+chatForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const message = chatInput.value.trim();
+  if (!message) return;
+  appendChatMessage(getPlayerName(), message);
+  sendRealtime("chat", { name: getPlayerName(), text: message });
   chatInput.value = "";
 });
 
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("beforeunload", persist);
 
-roomCode.textContent = state.room;
+initRealtime();
 resizeCanvas();
-restore();
+if (state.role === "host") restore();
