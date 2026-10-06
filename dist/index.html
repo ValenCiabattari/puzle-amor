@@ -84,16 +84,16 @@
         <aside class="side-panel" aria-label="Estado de la partida">
           <div class="couple-card">
             <div class="player-chip active">
-              <span class="avatar valen">V</span>
+              <span class="avatar valen" id="playerAvatar">V</span>
               <span>
-                <strong>Valentino</strong>
+                <strong id="playerNameLabel">Valentino</strong>
                 <small>conectado</small>
               </span>
             </div>
             <div class="player-chip waiting">
-              <span class="avatar love">A</span>
+              <span class="avatar love" id="partnerAvatar">A</span>
               <span>
-                <strong>Tu pareja</strong>
+                <strong id="partnerNameLabel">Tu pareja</strong>
                 <small id="partnerStatus">lista para invitar</small>
               </span>
             </div>
@@ -105,6 +105,14 @@
           </div>
 
           <div class="custom-card" aria-label="Personalizar mesa">
+            <label>
+              Tu nombre
+              <input id="playerNameInput" type="text" maxlength="24" value="Valentino" />
+            </label>
+            <label>
+              Nombre de tu pareja
+              <input id="partnerNameInput" type="text" maxlength="24" value="Tu pareja" />
+            </label>
             <label>
               Nombre de mesa
               <input id="tableNameInput" type="text" maxlength="34" value="Puzle a Distancia" />
@@ -131,13 +139,13 @@
               <span id="leaderText">Empate inicial</span>
             </div>
             <div class="score-row">
-              <span>Valentino</span>
+              <span id="playerScoreName">Valentino</span>
               <strong id="valenScore">0 piezas</strong>
               <small id="valenPercent">0%</small>
               <div class="score-track"><i id="valenBar"></i></div>
             </div>
             <div class="score-row">
-              <span>Tu pareja</span>
+              <span id="partnerScoreName">Tu pareja</span>
               <strong id="partnerScore">0 piezas</strong>
               <small id="partnerPercent">0%</small>
               <div class="score-track"><i id="partnerBar"></i></div>
@@ -220,11 +228,11 @@
         <section class="board-wrap" aria-label="Mesa de juego">
           <div class="live-cursor user-cursor" id="userCursor" aria-hidden="true">
             <span></span>
-            <strong>Valentino</strong>
+            <strong id="userCursorName">Valentino</strong>
           </div>
           <div class="live-cursor partner-cursor" id="partnerCursor" aria-hidden="true">
             <span></span>
-            <strong>Tu pareja</strong>
+            <strong id="partnerCursorName">Tu pareja</strong>
           </div>
           <canvas id="puzzleCanvas" width="1280" height="820"></canvas>
           <div class="empty-state" id="emptyState">
