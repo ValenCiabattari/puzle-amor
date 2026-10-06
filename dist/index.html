@@ -152,6 +152,27 @@
             </div>
           </div>
 
+          <div class="reward-card" aria-label="Premios de la sala">
+            <div class="reward-heading">
+              <strong>Premios</strong>
+              <span id="rewardCount">0 reglas</span>
+            </div>
+            <div class="reward-form">
+              <label>
+                %
+                <input id="rewardPercentInput" type="number" min="1" max="100" value="20" />
+              </label>
+              <label>
+                Premio
+                <input id="rewardTextInput" type="text" maxlength="80" placeholder="Ej: videollamada sorpresa" />
+              </label>
+              <button id="addReward" type="button">Agregar</button>
+            </div>
+            <div class="reward-list" id="rewardList">
+              <p class="system-message">Agrega premios por porcentaje antes o durante la partida.</p>
+            </div>
+          </div>
+
           <div class="toolbar" aria-label="Herramientas">
             <button id="zoomOut" type="button" aria-label="Alejar">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path></svg>

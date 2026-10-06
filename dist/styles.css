@@ -499,7 +499,8 @@ select option {
 }
 
 .custom-card,
-.score-card {
+.score-card,
+.reward-card {
   display: grid;
   gap: 10px;
   border: 1px solid var(--line);
@@ -585,6 +586,115 @@ select option {
 
 #partnerBar {
   background: linear-gradient(90deg, var(--sky), var(--mint));
+}
+
+.reward-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reward-heading span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.reward-form {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) 76px;
+  gap: 8px;
+  align-items: end;
+}
+
+.reward-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.reward-form input {
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 9px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+}
+
+.reward-form button {
+  min-height: 38px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--berry), var(--warm));
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.reward-list {
+  display: grid;
+  gap: 7px;
+}
+
+.reward-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 30px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(105, 75, 94, 0.12);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.reward-item.unlocked {
+  border-color: rgba(79, 199, 170, 0.38);
+  background: rgba(233, 255, 249, 0.78);
+}
+
+.reward-percent {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(216, 79, 134, 0.12);
+  color: var(--berry);
+  font-weight: 950;
+}
+
+.reward-copy {
+  min-width: 0;
+}
+
+.reward-copy strong,
+.reward-copy small {
+  display: block;
+}
+
+.reward-copy strong {
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.reward-copy small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.reward-remove {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(217, 72, 98, 0.1);
+  color: var(--danger);
+  font-weight: 950;
 }
 
 .system-message {
@@ -747,5 +857,9 @@ canvas {
   .primary,
   .ghost {
     width: 100%;
+  }
+
+  .reward-form {
+    grid-template-columns: 1fr;
   }
 }

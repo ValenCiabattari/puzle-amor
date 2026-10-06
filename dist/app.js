@@ -51,6 +51,11 @@ const partnerBar = document.querySelector("#partnerBar");
 const leaderText = document.querySelector("#leaderText");
 const playerScoreName = document.querySelector("#playerScoreName");
 const partnerScoreName = document.querySelector("#partnerScoreName");
+const rewardPercentInput = document.querySelector("#rewardPercentInput");
+const rewardTextInput = document.querySelector("#rewardTextInput");
+const addReward = document.querySelector("#addReward");
+const rewardList = document.querySelector("#rewardList");
+const rewardCount = document.querySelector("#rewardCount");
 
 const state = {
   imageData: "",
@@ -80,6 +85,7 @@ const state = {
   tableName: "Puzle a Distancia",
   playerName: "Valentino",
   partnerName: "Tu pareja",
+  rewards: [],
   invitedByUrl: false,
 };
 
@@ -159,6 +165,7 @@ function updateNames(playerName = state.playerName, partnerName = state.partnerN
     tableName: state.tableName,
     playerName: state.playerName,
     partnerName: state.partnerName,
+    rewards: state.rewards,
   });
 }
 
@@ -180,6 +187,7 @@ function updateTableName(name, announce = false) {
     tableName: state.tableName,
     playerName: state.playerName,
     partnerName: state.partnerName,
+    rewards: state.rewards,
   });
 }
 
@@ -188,12 +196,84 @@ function updateRoomDisplay() {
   roomInput.value = state.room;
 }
 
+function sortRewards(rewards) {
+  return [...rewards].sort((a, b) => a.percent - b.percent || a.text.localeCompare(b.text));
+}
+
+function normalizeRewards(rewards = []) {
+  return sortRewards(rewards)
+    .map((reward) => ({
+      id: reward.id || `reward-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      percent: Math.min(100, Math.max(1, Number(reward.percent) || 1)),
+      text: cleanName(reward.text || "", ""),
+      unlocked: Boolean(reward.unlocked),
+      unlockedAt: reward.unlockedAt || null,
+    }))
+    .filter((reward) => reward.text);
+}
+
+function renderRewards() {
+  state.rewards = normalizeRewards(state.rewards);
+  rewardCount.textContent = state.rewards.length === 1 ? "1 regla" : `${state.rewards.length} reglas`;
+
+  if (!state.rewards.length) {
+    rewardList.innerHTML = '<p class="system-message">Agrega premios por porcentaje antes o durante la partida.</p>';
+    return;
+  }
+
+  rewardList.innerHTML = state.rewards.map((reward) => `
+    <div class="reward-item ${reward.unlocked ? "unlocked" : ""}" data-reward-id="${escapeHtml(reward.id)}">
+      <span class="reward-percent">${reward.percent}%</span>
+      <span class="reward-copy">
+        <strong>${escapeHtml(reward.text)}</strong>
+        <small>${reward.unlocked ? "Desbloqueado" : "Pendiente"}</small>
+      </span>
+      <button class="reward-remove" type="button" aria-label="Quitar premio" data-remove-reward="${escapeHtml(reward.id)}">x</button>
+    </div>
+  `).join("");
+}
+
+function saveAndBroadcastRewards() {
+  renderRewards();
+  saveSettings();
+  sendRealtime("meta", {
+    tableName: state.tableName,
+    playerName: state.playerName,
+    partnerName: state.partnerName,
+    rewards: state.rewards,
+  });
+}
+
+function addRewardRule() {
+  const percent = Math.min(100, Math.max(1, Number(rewardPercentInput.value) || 1));
+  const text = rewardTextInput.value.trim();
+  if (!text) {
+    saveStatus.textContent = "Escribe el premio";
+    rewardTextInput.focus();
+    return;
+  }
+
+  state.rewards.push({
+    id: `reward-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    percent,
+    text,
+    unlocked: false,
+    unlockedAt: null,
+  });
+  rewardTextInput.value = "";
+  rewardPercentInput.value = Math.min(100, percent + 20);
+  saveAndBroadcastRewards();
+  checkRewards(getPuzzlePercent(), true);
+  saveStatus.textContent = "Premio agregado";
+}
+
 function saveSettings() {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({
     tableName: state.tableName,
     room: state.room,
     playerName: state.playerName,
     partnerName: state.partnerName,
+    rewards: state.rewards,
   }));
 }
 
@@ -203,9 +283,12 @@ function restoreSettings() {
     updateNames(saved.playerName || state.playerName, saved.partnerName || state.partnerName);
     if (saved.tableName) updateTableName(saved.tableName);
     if (saved.room) state.room = normalizeRoom(saved.room);
+    state.rewards = normalizeRewards(saved.rewards);
+    renderRewards();
   } catch {
     updateNames(state.playerName, state.partnerName);
     updateTableName(state.tableName);
+    renderRewards();
   }
 }
 
@@ -241,6 +324,7 @@ function getSnapshot() {
     tableName: state.tableName,
     playerName: state.playerName,
     partnerName: state.partnerName,
+    rewards: state.rewards,
   };
 }
 
@@ -268,6 +352,10 @@ async function applySnapshot(snapshot, message = "Sala sincronizada") {
   state.room = snapshot.room || state.room;
   if (snapshot.tableName) updateTableName(snapshot.tableName);
   if (snapshot.playerName || snapshot.partnerName) applyIncomingNames(snapshot.playerName, snapshot.partnerName);
+  if (snapshot.rewards) {
+    state.rewards = normalizeRewards(snapshot.rewards);
+    renderRewards();
+  }
   pieceCount.value = snapshot.pieceCount || String(snapshot.pieces.length);
   updateRoomDisplay();
   emptyState.classList.add("hidden");
@@ -321,6 +409,15 @@ async function handleRealtimeData(message) {
     if (message.payload.playerName || message.payload.partnerName) {
       applyIncomingNames(message.payload.playerName, message.payload.partnerName);
     }
+    if (message.payload.rewards) {
+      state.rewards = normalizeRewards(message.payload.rewards);
+      renderRewards();
+      saveSettings();
+    }
+  }
+
+  if (message.type === "reward") {
+    unlockReward(message.payload.id, false);
   }
 
   if (message.type === "chat") {
@@ -699,6 +796,55 @@ function updateProgress() {
     : valenDone > partnerDone
       ? `Va ganando ${state.playerName}`
       : `Va ganando ${state.partnerName}`;
+  checkRewards(pct, true);
+}
+
+function getPuzzlePercent() {
+  const total = state.pieces.length;
+  if (!total) return 0;
+  const done = state.pieces.filter((piece) => piece.locked).length;
+  return Math.round((done / total) * 100);
+}
+
+function appendSystemMessage(text) {
+  const item = document.createElement("p");
+  item.className = "system-message";
+  item.textContent = text;
+  chatMessages.appendChild(item);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function unlockReward(id, announce = true) {
+  const reward = state.rewards.find((item) => item.id === id);
+  if (!reward || reward.unlocked) return;
+  reward.unlocked = true;
+  reward.unlockedAt = new Date().toISOString();
+  renderRewards();
+  saveSettings();
+  appendSystemMessage(`Premio desbloqueado al ${reward.percent}%: ${reward.text}`);
+  if (state.image) {
+    launchCelebration(
+      state.board.x + state.board.width / 2,
+      state.board.y + state.board.height / 2,
+      38,
+    );
+    playSoftPop();
+  }
+  if (announce) {
+    sendRealtime("reward", { id: reward.id });
+    sendRealtime("meta", {
+      tableName: state.tableName,
+      playerName: state.playerName,
+      partnerName: state.partnerName,
+      rewards: state.rewards,
+    });
+  }
+}
+
+function checkRewards(percent, announce = true) {
+  for (const reward of state.rewards) {
+    if (!reward.unlocked && percent >= reward.percent) unlockReward(reward.id, announce);
+  }
 }
 
 function launchCelebration(x, y, amount = 28) {
@@ -826,6 +972,7 @@ function persist() {
     tableName: state.tableName,
     playerName: state.playerName,
     partnerName: state.partnerName,
+    rewards: state.rewards,
     savedAt: new Date().toISOString(),
   };
 
@@ -853,6 +1000,8 @@ async function restore() {
     if (saved.playerName || saved.partnerName) {
       updateNames(saved.playerName || state.playerName, saved.partnerName || state.partnerName);
     }
+    state.rewards = normalizeRewards(saved.rewards);
+    renderRewards();
     pieceCount.value = saved.pieceCount || String(saved.pieces.length);
     updateRoomDisplay();
     emptyState.classList.add("hidden");
@@ -917,6 +1066,23 @@ applyRoom.addEventListener("click", () => {
   } else {
     saveStatus.textContent = "Nombre de mesa guardado";
   }
+});
+
+addReward.addEventListener("click", addRewardRule);
+
+rewardTextInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addRewardRule();
+  }
+});
+
+rewardList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-remove-reward]");
+  if (!button) return;
+  state.rewards = state.rewards.filter((reward) => reward.id !== button.dataset.removeReward);
+  saveAndBroadcastRewards();
+  saveStatus.textContent = "Premio quitado";
 });
 
 resetPuzzle.addEventListener("click", () => {
