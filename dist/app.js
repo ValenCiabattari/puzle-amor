@@ -6,6 +6,7 @@ const ctx = canvas.getContext("2d");
 const imageInput = document.querySelector("#imageInput");
 const fileName = document.querySelector("#fileName");
 const pieceCount = document.querySelector("#pieceCount");
+const setupPanel = document.querySelector(".setup-panel");
 const createPuzzle = document.querySelector("#createPuzzle");
 const restorePuzzle = document.querySelector("#restorePuzzle");
 const resetPuzzle = document.querySelector("#resetPuzzle");
@@ -56,6 +57,9 @@ const rewardTextInput = document.querySelector("#rewardTextInput");
 const addReward = document.querySelector("#addReward");
 const rewardList = document.querySelector("#rewardList");
 const rewardCount = document.querySelector("#rewardCount");
+const customCard = document.querySelector(".custom-card");
+const rewardCard = document.querySelector(".reward-card");
+const toggleSetup = document.querySelector("#toggleSetup");
 
 const state = {
   imageData: "",
@@ -87,6 +91,7 @@ const state = {
   partnerName: "Tu pareja",
   rewards: [],
   invitedByUrl: false,
+  setupVisible: true,
 };
 
 function makeRoomCode() {
@@ -233,6 +238,19 @@ function renderRewards() {
   `).join("");
 }
 
+function setSetupVisible(visible) {
+  state.setupVisible = visible;
+  setupPanel.classList.toggle("is-hidden", !visible);
+  customCard.classList.toggle("is-hidden", !visible);
+  rewardCard.classList.toggle("is-hidden", !visible);
+  toggleSetup.classList.toggle("is-hidden", visible);
+  toggleSetup.textContent = visible ? "Ocultar configuración" : "Editar sala";
+}
+
+function enterPlayMode() {
+  setSetupVisible(false);
+}
+
 function saveAndBroadcastRewards() {
   renderRewards();
   saveSettings();
@@ -363,6 +381,7 @@ async function applySnapshot(snapshot, message = "Sala sincronizada") {
   updateProgress();
   persist();
   draw();
+  enterPlayMode();
   saveStatus.textContent = message;
 }
 
@@ -401,6 +420,7 @@ async function handleRealtimeData(message) {
     emptyState.classList.remove("hidden");
     updateProgress();
     draw();
+    setSetupVisible(true);
     saveStatus.textContent = "Mesa reiniciada por la sala";
   }
 
@@ -627,6 +647,7 @@ async function startPuzzle() {
   persist();
   sendRealtime("snapshot", getSnapshot());
   draw();
+  enterPlayMode();
 }
 
 function drawPiece(piece, active = false) {
@@ -1008,6 +1029,7 @@ async function restore() {
     fileName.textContent = "Foto guardada recuperada";
     updateProgress();
     draw();
+    enterPlayMode();
     saveStatus.textContent = "Partida recuperada";
   } catch {
     saveStatus.textContent = "No pude recuperar ese guardado";
@@ -1085,6 +1107,10 @@ rewardList.addEventListener("click", (event) => {
   saveStatus.textContent = "Premio quitado";
 });
 
+toggleSetup.addEventListener("click", () => {
+  setSetupVisible(!state.setupVisible);
+});
+
 resetPuzzle.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEY);
   state.imageData = "";
@@ -1095,6 +1121,7 @@ resetPuzzle.addEventListener("click", () => {
   emptyState.classList.remove("hidden");
   updateProgress();
   draw();
+  setSetupVisible(true);
   sendRealtime("reset", {});
   saveStatus.textContent = "Mesa reiniciada";
 });
