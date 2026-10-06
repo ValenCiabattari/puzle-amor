@@ -17,6 +17,14 @@ const copyRoom = document.querySelector("#copyRoom");
 const zoomIn = document.querySelector("#zoomIn");
 const zoomOut = document.querySelector("#zoomOut");
 const centerBoard = document.querySelector("#centerBoard");
+const musicToggle = document.querySelector("#musicToggle");
+const celebrateButton = document.querySelector("#celebrateButton");
+const placedCount = document.querySelector("#placedCount");
+const chatForm = document.querySelector("#chatForm");
+const chatInput = document.querySelector("#chatInput");
+const chatMessages = document.querySelector("#chatMessages");
+const userCursor = document.querySelector("#userCursor");
+const boardWrap = document.querySelector(".board-wrap");
 
 const state = {
   imageData: "",
@@ -33,6 +41,11 @@ const state = {
   isPanning: false,
   dirty: false,
   room: "AMOR-0427",
+  particles: [],
+  musicOn: false,
+  audioContext: null,
+  musicTimer: 0,
+  musicStep: 0,
 };
 
 function makeRoomCode() {
@@ -160,9 +173,9 @@ function drawPiece(piece, active = false) {
   const sourceH = image.height / rows;
 
   ctx.save();
-  ctx.shadowColor = active ? "rgba(255, 138, 112, 0.5)" : "rgba(0, 0, 0, 0.36)";
-  ctx.shadowBlur = active ? 18 : 10;
-  ctx.shadowOffsetY = active ? 8 : 5;
+  ctx.shadowColor = active ? "rgba(216, 79, 134, 0.35)" : "rgba(122, 77, 88, 0.22)";
+  ctx.shadowBlur = active ? 18 : 9;
+  ctx.shadowOffsetY = active ? 8 : 4;
   ctx.beginPath();
   ctx.roundRect(piece.x, piece.y, piece.width, piece.height, 6);
   ctx.clip();
@@ -180,7 +193,7 @@ function drawPiece(piece, active = false) {
   ctx.restore();
 
   ctx.save();
-  ctx.strokeStyle = piece.locked ? "rgba(126, 219, 193, 0.9)" : "rgba(255, 255, 255, 0.52)";
+  ctx.strokeStyle = piece.locked ? "rgba(79, 199, 170, 0.95)" : "rgba(255, 255, 255, 0.88)";
   ctx.lineWidth = active ? 3 : 1.5;
   ctx.beginPath();
   ctx.roundRect(piece.x, piece.y, piece.width, piece.height, 6);
@@ -192,16 +205,16 @@ function drawBoardGuide() {
   if (!state.image) return;
 
   ctx.save();
-  ctx.globalAlpha = 0.2;
+  ctx.globalAlpha = 0.28;
   ctx.drawImage(state.image, state.board.x, state.board.y, state.board.width, state.board.height);
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(247, 214, 208, 0.65)";
+  ctx.strokeStyle = "rgba(216, 79, 134, 0.42)";
   ctx.lineWidth = 2;
   ctx.strokeRect(state.board.x, state.board.y, state.board.width, state.board.height);
 
   const pieceW = state.board.width / state.cols;
   const pieceH = state.board.height / state.rows;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.13)";
+  ctx.strokeStyle = "rgba(52, 35, 55, 0.11)";
   ctx.lineWidth = 1;
   for (let c = 1; c < state.cols; c += 1) {
     ctx.beginPath();
@@ -236,7 +249,21 @@ function draw() {
   for (const piece of ordered) {
     drawPiece(piece, piece.id === state.selectedId);
   }
+  drawParticles();
   ctx.restore();
+}
+
+function drawParticles() {
+  for (const particle of state.particles) {
+    const alpha = Math.max(0, particle.life / particle.maxLife);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = particle.color;
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function screenToWorld(clientX, clientY) {
@@ -270,7 +297,12 @@ function snapIfClose(piece) {
     piece.y = piece.targetY;
     piece.locked = true;
     updateProgress();
+    launchCelebration(piece.x + piece.width / 2, piece.y + piece.height / 2, 16);
+    playSoftPop();
+    saveStatus.textContent = "Pieza colocada";
+    return true;
   }
+  return false;
 }
 
 function updateProgress() {
@@ -278,8 +310,107 @@ function updateProgress() {
   const done = state.pieces.filter((piece) => piece.locked).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   progressText.textContent = `${done} de ${total}`;
+  placedCount.textContent = done === 1 ? "1 pieza colocada" : `${done} piezas colocadas`;
   progressRing.textContent = `${pct}%`;
   progressRing.style.setProperty("--progress", `${pct}%`);
+}
+
+function launchCelebration(x, y, amount = 28) {
+  const colors = ["#d84f86", "#ff8a70", "#4fc7aa", "#77b9e8", "#eeb84a"];
+  for (let i = 0; i < amount; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.6 + Math.random() * 3.2;
+    state.particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.5,
+      gravity: 0.055 + Math.random() * 0.035,
+      life: 42 + Math.random() * 28,
+      maxLife: 70,
+      size: 3 + Math.random() * 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    });
+  }
+  ensureCelebrationLoop();
+}
+
+let animationFrame = 0;
+function ensureCelebrationLoop() {
+  if (!animationFrame) animationFrame = requestAnimationFrame(stepCelebration);
+}
+
+function stepCelebration() {
+  for (const particle of state.particles) {
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+    particle.vy += particle.gravity;
+    particle.life -= 1;
+  }
+  state.particles = state.particles.filter((particle) => particle.life > 0);
+  draw();
+  animationFrame = state.particles.length ? requestAnimationFrame(stepCelebration) : 0;
+}
+
+function getAudioContext() {
+  const AudioEngine = window.AudioContext || window.webkitAudioContext;
+  if (!AudioEngine) return null;
+  if (!state.audioContext || state.audioContext.state === "closed") {
+    state.audioContext = new AudioEngine();
+  }
+  return state.audioContext;
+}
+
+function playTone(frequency, duration = 0.9, volume = 0.03) {
+  const audio = getAudioContext();
+  if (!audio) return;
+  if (audio.state === "suspended") audio.resume();
+  const now = audio.currentTime;
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
+  oscillator.type = "sine";
+  oscillator.frequency.value = frequency;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(volume, now + 0.04);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.connect(gain).connect(audio.destination);
+  oscillator.start(now);
+  oscillator.stop(now + duration + 0.05);
+}
+
+function playSoftPop() {
+  playTone(660, 0.18, 0.018);
+}
+
+function playAmbientChord() {
+  const chords = [
+    [261.63, 329.63, 392.0],
+    [293.66, 349.23, 440.0],
+    [246.94, 329.63, 415.3],
+    [261.63, 349.23, 392.0],
+  ];
+  const chord = chords[state.musicStep % chords.length];
+  state.musicStep += 1;
+  chord.forEach((note, index) => playTone(note, 1.5 + index * 0.12, 0.012));
+}
+
+function toggleMusic() {
+  if (state.musicOn) {
+    clearInterval(state.musicTimer);
+    state.musicTimer = 0;
+    state.musicOn = false;
+    musicToggle.classList.remove("active");
+    musicToggle.setAttribute("aria-label", "Activar música suave");
+    saveStatus.textContent = "Música pausada";
+    return;
+  }
+
+  state.musicOn = true;
+  musicToggle.classList.add("active");
+  musicToggle.setAttribute("aria-label", "Pausar música suave");
+  saveStatus.textContent = "Música suave activada";
+  playAmbientChord();
+  state.musicTimer = window.setInterval(playAmbientChord, 1800);
 }
 
 function persist() {
@@ -346,6 +477,13 @@ function scheduleSave() {
   saveTimer = window.setTimeout(persist, 350);
 }
 
+function updateUserCursor(event) {
+  const rect = boardWrap.getBoundingClientRect();
+  userCursor.style.display = "flex";
+  userCursor.style.left = `${event.clientX - rect.left}px`;
+  userCursor.style.top = `${event.clientY - rect.top}px`;
+}
+
 imageInput.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -393,6 +531,7 @@ canvas.addEventListener("pointerdown", (event) => {
 });
 
 canvas.addEventListener("pointermove", (event) => {
+  updateUserCursor(event);
   if (!state.image) return;
 
   if (state.selectedId !== null) {
@@ -425,6 +564,10 @@ canvas.addEventListener("pointerup", () => {
   draw();
 });
 
+boardWrap.addEventListener("pointerleave", () => {
+  userCursor.style.display = "none";
+});
+
 canvas.addEventListener("wheel", (event) => {
   if (!state.image) return;
   event.preventDefault();
@@ -448,6 +591,39 @@ centerBoard.addEventListener("click", () => {
   state.pan = { x: 0, y: 0 };
   state.scale = 1;
   draw();
+});
+
+musicToggle.addEventListener("click", toggleMusic);
+
+celebrateButton.addEventListener("click", () => {
+  if (!state.image) {
+    saveStatus.textContent = "Crea un puzle para celebrar";
+    return;
+  }
+  launchCelebration(
+    state.board.x + state.board.width / 2,
+    state.board.y + state.board.height / 2,
+    46,
+  );
+  playSoftPop();
+  saveStatus.textContent = "Celebración enviada";
+});
+
+chatForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const message = chatInput.value.trim();
+  if (!message) return;
+  const item = document.createElement("p");
+  item.innerHTML = `<strong>Valentino</strong> ${message.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[char])}`;
+  chatMessages.appendChild(item);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  chatInput.value = "";
 });
 
 window.addEventListener("resize", resizeCanvas);

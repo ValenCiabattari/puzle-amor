@@ -4,10 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Puzle a Distancia</title>
-    <meta
-      name="description"
-      content="Un prototipo de puzle para jugar en pareja con foto propia, piezas arrastrables y progreso guardado."
-    />
+    <meta name="description" content="Un puzle luminoso para armar en pareja con foto propia y progreso guardado." />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -21,7 +18,7 @@
         <div class="brand">
           <div class="mark" aria-hidden="true"></div>
           <div>
-            <p class="eyebrow">Mesa privada</p>
+            <p class="eyebrow">Mesa compartida</p>
             <h1>Puzle a Distancia</h1>
           </div>
         </div>
@@ -85,17 +82,28 @@
 
       <section class="play-layout">
         <aside class="side-panel" aria-label="Estado de la partida">
-          <div class="connection">
-            <span class="presence you"></span>
-            <span>Tú</span>
-            <span class="presence partner"></span>
-            <span>Tu pareja</span>
+          <div class="couple-card">
+            <div class="player-chip active">
+              <span class="avatar valen">V</span>
+              <span>
+                <strong>Valentino</strong>
+                <small>conectado</small>
+              </span>
+            </div>
+            <div class="player-chip waiting">
+              <span class="avatar love">A</span>
+              <span>
+                <strong>Tu pareja</strong>
+                <small>lista para invitar</small>
+              </span>
+            </div>
           </div>
 
           <div class="progress-card">
             <div>
               <span class="label">Progreso</span>
               <strong id="progressText">0 de 0</strong>
+              <small id="placedCount">Ninguna pieza colocada todavía</small>
             </div>
             <div class="progress-ring" id="progressRing">0%</div>
           </div>
@@ -119,11 +127,49 @@
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
             </button>
+            <button id="musicToggle" type="button" aria-label="Activar música suave">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+            </button>
           </div>
 
           <div class="autosave">
             <span class="dot"></span>
             <span id="saveStatus">Listo para guardar</span>
+          </div>
+
+          <button class="celebrate" id="celebrateButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 5l14 14"></path>
+              <path d="M14 4l1 5 5 1"></path>
+              <path d="M4 14l5 1 1 5"></path>
+              <path d="M12 3v3"></path>
+              <path d="M3 12h3"></path>
+            </svg>
+            Celebrar
+          </button>
+
+          <div class="chat-card" aria-label="Chat de la sala">
+            <div class="chat-header">
+              <strong>Chat</strong>
+              <span>local por ahora</span>
+            </div>
+            <div class="chat-messages" id="chatMessages" aria-live="polite">
+              <p><strong>Valentino</strong> Yo preparo el mate virtual.</p>
+              <p><strong>Tu pareja</strong> Yo elijo la foto linda.</p>
+            </div>
+            <form class="chat-form" id="chatForm">
+              <input id="chatInput" type="text" maxlength="80" placeholder="Escribir mensajito..." />
+              <button type="submit" aria-label="Enviar mensaje">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M22 2 11 13"></path>
+                  <path d="m22 2-7 20-4-9-9-4 20-7z"></path>
+                </svg>
+              </button>
+            </form>
           </div>
 
           <button class="danger" id="resetPuzzle" type="button">
@@ -145,6 +191,14 @@
         </aside>
 
         <section class="board-wrap" aria-label="Mesa de juego">
+          <div class="live-cursor user-cursor" id="userCursor" aria-hidden="true">
+            <span></span>
+            <strong>Valentino</strong>
+          </div>
+          <div class="live-cursor partner-cursor" id="partnerCursor" aria-hidden="true">
+            <span></span>
+            <strong>Tu pareja</strong>
+          </div>
           <canvas id="puzzleCanvas" width="1280" height="820"></canvas>
           <div class="empty-state" id="emptyState">
             <strong>Sube una foto y crea el primer puzle</strong>

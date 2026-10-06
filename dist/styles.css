@@ -1,18 +1,20 @@
 :root {
-  color-scheme: dark;
-  --bg: #101321;
-  --bg-soft: #171b2d;
-  --panel: rgba(255, 255, 255, 0.075);
-  --panel-strong: rgba(255, 255, 255, 0.12);
-  --line: rgba(255, 255, 255, 0.16);
-  --text: #f8f4ef;
-  --muted: #b9bdcc;
+  color-scheme: light;
+  --bg: #fff7ef;
+  --bg-soft: #ffe8d9;
+  --panel: rgba(255, 255, 255, 0.76);
+  --panel-strong: rgba(255, 255, 255, 0.94);
+  --line: rgba(105, 75, 94, 0.18);
+  --text: #342337;
+  --muted: #7c6575;
   --warm: #ff8a70;
-  --rose: #f7d6d0;
-  --mint: #7edbc1;
-  --gold: #f2c464;
-  --danger: #ff6b80;
-  --shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+  --rose: #ffd4df;
+  --mint: #4fc7aa;
+  --gold: #eeb84a;
+  --berry: #d84f86;
+  --sky: #77b9e8;
+  --danger: #d94862;
+  --shadow: 0 22px 70px rgba(134, 88, 68, 0.18);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -26,9 +28,10 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 138, 112, 0.18), transparent 34%),
-    radial-gradient(circle at 88% 20%, rgba(126, 219, 193, 0.14), transparent 30%),
-    linear-gradient(135deg, #0e1120 0%, #1c1725 48%, #111827 100%);
+    radial-gradient(circle at 15% 12%, rgba(255, 175, 154, 0.55), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(119, 185, 232, 0.42), transparent 28%),
+    radial-gradient(circle at 72% 90%, rgba(79, 199, 170, 0.32), transparent 30%),
+    linear-gradient(135deg, #fff7ef 0%, #ffe9f0 46%, #eaf7ff 100%);
   color: var(--text);
 }
 
@@ -66,9 +69,9 @@ svg {
 .setup-panel,
 .side-panel {
   border: 1px solid var(--line);
-  background: rgba(16, 19, 33, 0.72);
+  background: var(--panel);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(20px);
 }
 
 .topbar {
@@ -91,8 +94,8 @@ svg {
   height: 44px;
   border-radius: 8px;
   background:
-    linear-gradient(135deg, transparent 35%, rgba(16, 19, 33, 0.85) 36% 45%, transparent 46%),
-    linear-gradient(135deg, var(--rose), var(--warm));
+    linear-gradient(135deg, transparent 35%, rgba(255, 255, 255, 0.92) 36% 45%, transparent 46%),
+    linear-gradient(135deg, var(--rose), var(--warm), var(--sky));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36);
 }
 
@@ -121,7 +124,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
-  background: var(--panel);
+  background: rgba(255, 255, 255, 0.64);
 }
 
 .room-card strong {
@@ -136,8 +139,9 @@ h1 {
   width: 38px;
   height: 38px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .setup-panel {
@@ -154,10 +158,10 @@ h1 {
   align-items: center;
   gap: 12px;
   min-width: 0;
-  border: 1px dashed rgba(255, 255, 255, 0.34);
+  border: 1px dashed rgba(216, 79, 134, 0.34);
   border-radius: 8px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.62);
   cursor: pointer;
 }
 
@@ -175,8 +179,8 @@ h1 {
   width: 42px;
   height: 42px;
   border-radius: 8px;
-  background: rgba(247, 214, 208, 0.14);
-  color: var(--rose);
+  background: rgba(255, 212, 223, 0.65);
+  color: var(--berry);
 }
 
 .upload-card strong,
@@ -209,7 +213,7 @@ select {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0 12px;
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.76);
   color: var(--text);
 }
 
@@ -233,20 +237,21 @@ select option {
 }
 
 .primary {
-  background: linear-gradient(135deg, var(--warm), #dd5576);
-  color: #160b0d;
+  background: linear-gradient(135deg, #ff9f86, #ffcf74);
+  color: #3c1f1d;
+  box-shadow: 0 12px 28px rgba(255, 138, 112, 0.26);
 }
 
 .ghost {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .danger {
   width: 100%;
-  border: 1px solid rgba(255, 107, 128, 0.45);
-  background: rgba(255, 107, 128, 0.12);
-  color: #ffd8dd;
+  border: 1px solid rgba(217, 72, 98, 0.28);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--danger);
 }
 
 .play-layout {
@@ -264,29 +269,50 @@ select option {
   padding: 14px;
 }
 
-.connection {
+.couple-card {
   display: grid;
-  grid-template-columns: 12px 1fr 12px 1fr;
-  align-items: center;
   gap: 8px;
+}
+
+.player-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.player-chip strong,
+.player-chip small {
+  display: block;
+}
+
+.player-chip small {
+  margin-top: 1px;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.82rem;
 }
 
-.presence {
-  width: 10px;
-  height: 10px;
+.avatar {
+  display: grid;
+  flex: 0 0 42px;
+  place-items: center;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
+  color: #ffffff;
+  font-weight: 900;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.56);
 }
 
-.presence.you {
-  background: var(--mint);
-  box-shadow: 0 0 0 5px rgba(126, 219, 193, 0.12);
+.avatar.valen {
+  background: linear-gradient(135deg, #4fc7aa, #77b9e8);
 }
 
-.presence.partner {
-  background: var(--gold);
-  box-shadow: 0 0 0 5px rgba(242, 196, 100, 0.12);
+.avatar.love {
+  background: linear-gradient(135deg, #d84f86, #ff8a70);
 }
 
 .progress-card {
@@ -297,13 +323,20 @@ select option {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
-  background: var(--panel);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 244, 227, 0.78));
 }
 
 .progress-card strong {
   display: block;
   margin-top: 4px;
   font-size: 1.25rem;
+}
+
+.progress-card small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.84rem;
 }
 
 .progress-ring {
@@ -313,8 +346,8 @@ select option {
   height: 64px;
   border-radius: 50%;
   background:
-    radial-gradient(circle closest-side, #181b2c 76%, transparent 77%),
-    conic-gradient(var(--mint) var(--progress, 0%), rgba(255, 255, 255, 0.14) 0);
+    radial-gradient(circle closest-side, #fffaf4 76%, transparent 77%),
+    conic-gradient(var(--mint) var(--progress, 0%), rgba(52, 35, 55, 0.1) 0);
   color: var(--text);
   font-size: 0.88rem;
   font-weight: 900;
@@ -322,12 +355,17 @@ select option {
 
 .toolbar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
 .toolbar button {
   width: 100%;
+}
+
+.toolbar button.active {
+  background: var(--berry);
+  color: #ffffff;
 }
 
 .autosave {
@@ -339,6 +377,86 @@ select option {
   font-size: 0.9rem;
 }
 
+.celebrate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #d84f86, #ff8a70);
+  color: #ffffff;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(216, 79, 134, 0.22);
+}
+
+.chat-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.chat-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chat-header span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.chat-messages {
+  display: grid;
+  gap: 7px;
+  max-height: 122px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.chat-messages p {
+  margin: 0;
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: rgba(255, 232, 217, 0.68);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.chat-messages strong {
+  color: var(--berry);
+}
+
+.chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 8px;
+}
+
+.chat-form input {
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text);
+}
+
+.chat-form button {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--mint);
+  color: #ffffff;
+}
+
 .dot {
   width: 8px;
   height: 8px;
@@ -348,10 +466,10 @@ select option {
 
 .note {
   margin-top: auto;
-  border: 1px solid rgba(247, 214, 208, 0.2);
+  border: 1px solid rgba(216, 79, 134, 0.18);
   border-radius: 8px;
   padding: 12px;
-  background: rgba(247, 214, 208, 0.08);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .note strong {
@@ -373,11 +491,68 @@ select option {
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    rgba(7, 10, 20, 0.72);
+    linear-gradient(rgba(120, 85, 115, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 85, 115, 0.075) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 244, 232, 0.65));
   background-size: 36px 36px;
   box-shadow: var(--shadow);
+}
+
+.live-cursor {
+  position: absolute;
+  z-index: 3;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  transform: translate(10px, 10px);
+  color: var(--cursor-color);
+}
+
+.live-cursor span {
+  width: 0;
+  height: 0;
+  border-top: 13px solid currentColor;
+  border-right: 9px solid transparent;
+}
+
+.live-cursor strong {
+  border-radius: 8px;
+  padding: 5px 7px;
+  background: var(--cursor-color);
+  color: #ffffff;
+  font-size: 0.78rem;
+  line-height: 1;
+  box-shadow: 0 10px 22px rgba(67, 45, 56, 0.18);
+}
+
+.user-cursor {
+  --cursor-color: var(--mint);
+}
+
+.partner-cursor {
+  display: flex;
+  --cursor-color: var(--berry);
+  animation: partnerFloat 7s ease-in-out infinite;
+}
+
+@keyframes partnerFloat {
+  0% {
+    left: 68%;
+    top: 22%;
+  }
+  35% {
+    left: 78%;
+    top: 38%;
+  }
+  70% {
+    left: 58%;
+    top: 64%;
+  }
+  100% {
+    left: 68%;
+    top: 22%;
+  }
 }
 
 canvas {
