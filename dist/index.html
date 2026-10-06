@@ -18,8 +18,8 @@
         <div class="brand">
           <div class="mark" aria-hidden="true"></div>
           <div>
-            <p class="eyebrow">Mesa compartida</p>
-            <h1>Puzle a Distancia</h1>
+            <p class="eyebrow" id="tableEyebrow">Mesa compartida</p>
+            <h1 id="tableTitle">Puzle a Distancia</h1>
           </div>
         </div>
 
@@ -104,6 +104,18 @@
             <span id="syncStatus">Preparando sala online...</span>
           </div>
 
+          <div class="custom-card" aria-label="Personalizar mesa">
+            <label>
+              Nombre de mesa
+              <input id="tableNameInput" type="text" maxlength="34" value="Puzle a Distancia" />
+            </label>
+            <label>
+              Sala
+              <input id="roomInput" type="text" maxlength="48" />
+            </label>
+            <button id="applyRoom" type="button">Guardar sala</button>
+          </div>
+
           <div class="progress-card">
             <div>
               <span class="label">Progreso</span>
@@ -111,6 +123,25 @@
               <small id="placedCount">Ninguna pieza colocada todavía</small>
             </div>
             <div class="progress-ring" id="progressRing">0%</div>
+          </div>
+
+          <div class="score-card" aria-label="Marcador de piezas">
+            <div class="score-heading">
+              <strong>Mini competencia</strong>
+              <span id="leaderText">Empate inicial</span>
+            </div>
+            <div class="score-row">
+              <span>Valentino</span>
+              <strong id="valenScore">0 piezas</strong>
+              <small id="valenPercent">0%</small>
+              <div class="score-track"><i id="valenBar"></i></div>
+            </div>
+            <div class="score-row">
+              <span>Tu pareja</span>
+              <strong id="partnerScore">0 piezas</strong>
+              <small id="partnerPercent">0%</small>
+              <div class="score-track"><i id="partnerBar"></i></div>
+            </div>
           </div>
 
           <div class="toolbar" aria-label="Herramientas">
@@ -159,12 +190,11 @@
 
           <div class="chat-card" aria-label="Chat de la sala">
             <div class="chat-header">
-              <strong>Chat</strong>
-              <span>local por ahora</span>
+              <strong>Chat en vivo</strong>
+              <span id="chatHint">mensajes de la sala</span>
             </div>
             <div class="chat-messages" id="chatMessages" aria-live="polite">
-              <p><strong>Valentino</strong> Yo preparo el mate virtual.</p>
-              <p><strong>Tu pareja</strong> Yo elijo la foto linda.</p>
+              <p class="system-message">Los mensajes aparecen acá cuando escriben en la sala.</p>
             </div>
             <form class="chat-form" id="chatForm">
               <input id="chatInput" type="text" maxlength="80" placeholder="Escribir mensajito..." />
@@ -185,14 +215,6 @@
             </svg>
             Reiniciar
           </button>
-
-          <div class="note">
-            <strong>Modo pareja</strong>
-            <p>
-              Copia el link de sala y envíaselo. Al entrar, la otra persona recibe la foto, el progreso y cada
-              movimiento en vivo.
-            </p>
-          </div>
         </aside>
 
         <section class="board-wrap" aria-label="Mesa de juego">

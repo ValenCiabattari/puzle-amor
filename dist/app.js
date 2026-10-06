@@ -1,4 +1,5 @@
 const STORAGE_KEY = "couple-puzzle-progress-v1";
+const SETTINGS_KEY = "couple-puzzle-settings-v1";
 
 const canvas = document.querySelector("#puzzleCanvas");
 const ctx = canvas.getContext("2d");
@@ -14,6 +15,10 @@ const progressRing = document.querySelector("#progressRing");
 const saveStatus = document.querySelector("#saveStatus");
 const roomCode = document.querySelector("#roomCode");
 const copyRoom = document.querySelector("#copyRoom");
+const tableTitle = document.querySelector("#tableTitle");
+const tableNameInput = document.querySelector("#tableNameInput");
+const roomInput = document.querySelector("#roomInput");
+const applyRoom = document.querySelector("#applyRoom");
 const zoomIn = document.querySelector("#zoomIn");
 const zoomOut = document.querySelector("#zoomOut");
 const centerBoard = document.querySelector("#centerBoard");
@@ -29,6 +34,13 @@ const boardWrap = document.querySelector(".board-wrap");
 const partnerStatus = document.querySelector("#partnerStatus");
 const syncStatus = document.querySelector("#syncStatus");
 const syncCard = document.querySelector(".sync-card");
+const valenScore = document.querySelector("#valenScore");
+const partnerScore = document.querySelector("#partnerScore");
+const valenPercent = document.querySelector("#valenPercent");
+const partnerPercent = document.querySelector("#partnerPercent");
+const valenBar = document.querySelector("#valenBar");
+const partnerBar = document.querySelector("#partnerBar");
+const leaderText = document.querySelector("#leaderText");
 
 const state = {
   imageData: "",
@@ -55,6 +67,8 @@ const state = {
   conn: null,
   peerReady: false,
   lastCursorSent: 0,
+  tableName: "Puzle a Distancia",
+  invitedByUrl: false,
 };
 
 function makeRoomCode() {
@@ -62,6 +76,16 @@ function makeRoomCode() {
   const word = words[Math.floor(Math.random() * words.length)];
   const random = crypto.getRandomValues(new Uint32Array(1))[0].toString(36).slice(0, 5);
   return `puzle-amor-${word}-${random}`;
+}
+
+function normalizeRoom(value) {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
+  return normalized || makeRoomCode();
 }
 
 function getRoomFromUrl() {
@@ -83,10 +107,41 @@ function setPartnerOnline(online) {
   partnerStatus.textContent = online ? "conectada en vivo" : "lista para invitar";
 }
 
+function updateTableName(name, announce = false) {
+  state.tableName = name.trim() || "Puzle a Distancia";
+  tableTitle.textContent = state.tableName;
+  tableNameInput.value = state.tableName;
+  document.title = state.tableName;
+  saveSettings();
+  if (announce) sendRealtime("meta", { tableName: state.tableName });
+}
+
+function updateRoomDisplay() {
+  updateRoomDisplay();
+  roomInput.value = state.room;
+}
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+    tableName: state.tableName,
+    room: state.room,
+  }));
+}
+
+function restoreSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    if (saved.tableName) updateTableName(saved.tableName);
+    if (saved.room) state.room = normalizeRoom(saved.room);
+  } catch {
+    updateTableName(state.tableName);
+  }
+}
+
 function getSnapshot() {
   return {
     imageData: state.imageData,
-    pieces: state.pieces.map(({ id, row, col, x, y, targetX, targetY, width, height, locked }) => ({
+    pieces: state.pieces.map(({ id, row, col, x, y, targetX, targetY, width, height, locked, lockedBy }) => ({
       id,
       row,
       col,
@@ -97,12 +152,14 @@ function getSnapshot() {
       width,
       height,
       locked,
+      lockedBy,
     })),
     rows: state.rows,
     cols: state.cols,
     board: state.board,
     room: state.room,
     pieceCount: pieceCount.value,
+    tableName: state.tableName,
   };
 }
 
@@ -124,8 +181,9 @@ async function applySnapshot(snapshot, message = "Sala sincronizada") {
   state.cols = snapshot.cols;
   state.board = snapshot.board;
   state.room = snapshot.room || state.room;
+  if (snapshot.tableName) updateTableName(snapshot.tableName);
   pieceCount.value = snapshot.pieceCount || String(snapshot.pieces.length);
-  roomCode.textContent = state.room;
+  updateRoomDisplay();
   emptyState.classList.add("hidden");
   fileName.textContent = "Foto sincronizada en la sala";
   updateProgress();
@@ -152,6 +210,7 @@ async function handleRealtimeData(message) {
     piece.x = incoming.x;
     piece.y = incoming.y;
     piece.locked = incoming.locked;
+    piece.lockedBy = incoming.lockedBy;
     updateProgress();
     persist();
     draw();
@@ -168,6 +227,10 @@ async function handleRealtimeData(message) {
     updateProgress();
     draw();
     saveStatus.textContent = "Mesa reiniciada por la sala";
+  }
+
+  if (message.type === "meta") {
+    if (message.payload.tableName) updateTableName(message.payload.tableName);
   }
 
   if (message.type === "chat") {
@@ -206,11 +269,27 @@ function attachConnection(conn) {
   conn.on("error", () => setSyncStatus("No se pudo mantener la conexión", true));
 }
 
-function initRealtime() {
+function closeRealtime() {
+  if (state.conn) {
+    state.conn.close();
+    state.conn = null;
+  }
+  if (state.peer) {
+    state.peer.destroy();
+    state.peer = null;
+  }
+  state.peerReady = false;
+  setPartnerOnline(false);
+}
+
+function initRealtime(nextRoom = null, nextRole = null) {
+  closeRealtime();
   const invitedRoom = getRoomFromUrl();
-  state.role = invitedRoom ? "guest" : "host";
-  state.room = invitedRoom || makeRoomCode();
-  roomCode.textContent = state.room;
+  state.invitedByUrl = Boolean(invitedRoom);
+  state.role = nextRole || (invitedRoom ? "guest" : "host");
+  state.room = normalizeRoom(nextRoom || invitedRoom || state.room || makeRoomCode());
+  updateRoomDisplay();
+  saveSettings();
 
   if (!window.Peer) {
     setSyncStatus("Modo local: no cargó la conexión online", true);
@@ -331,6 +410,7 @@ function createPieces(total) {
       width: pieceW,
       height: pieceH,
       locked: false,
+      lockedBy: null,
     };
   });
 }
@@ -481,6 +561,7 @@ function snapIfClose(piece) {
     piece.x = piece.targetX;
     piece.y = piece.targetY;
     piece.locked = true;
+    piece.lockedBy = getPlayerName();
     updateProgress();
     launchCelebration(piece.x + piece.width / 2, piece.y + piece.height / 2, 16);
     playSoftPop();
@@ -493,11 +574,26 @@ function snapIfClose(piece) {
 function updateProgress() {
   const total = state.pieces.length;
   const done = state.pieces.filter((piece) => piece.locked).length;
+  const valenDone = state.pieces.filter((piece) => piece.locked && piece.lockedBy === "Valentino").length;
+  const partnerDone = state.pieces.filter((piece) => piece.locked && piece.lockedBy === "Tu pareja").length;
   const pct = total ? Math.round((done / total) * 100) : 0;
+  const valenPct = done ? Math.round((valenDone / done) * 100) : 0;
+  const partnerPct = done ? Math.round((partnerDone / done) * 100) : 0;
   progressText.textContent = `${done} de ${total}`;
   placedCount.textContent = done === 1 ? "1 pieza colocada" : `${done} piezas colocadas`;
   progressRing.textContent = `${pct}%`;
   progressRing.style.setProperty("--progress", `${pct}%`);
+  valenScore.textContent = valenDone === 1 ? "1 pieza" : `${valenDone} piezas`;
+  partnerScore.textContent = partnerDone === 1 ? "1 pieza" : `${partnerDone} piezas`;
+  valenPercent.textContent = `${valenPct}%`;
+  partnerPercent.textContent = `${partnerPct}%`;
+  valenBar.style.width = `${valenPct}%`;
+  partnerBar.style.width = `${partnerPct}%`;
+  leaderText.textContent = valenDone === partnerDone
+    ? "Empate"
+    : valenDone > partnerDone
+      ? "Va ganando Valentino"
+      : "Va ganando tu pareja";
 }
 
 function launchCelebration(x, y, amount = 28) {
@@ -603,7 +699,7 @@ function persist() {
 
   const payload = {
     imageData: state.imageData,
-    pieces: state.pieces.map(({ id, row, col, x, y, targetX, targetY, width, height, locked }) => ({
+    pieces: state.pieces.map(({ id, row, col, x, y, targetX, targetY, width, height, locked, lockedBy }) => ({
       id,
       row,
       col,
@@ -614,12 +710,14 @@ function persist() {
       width,
       height,
       locked,
+      lockedBy,
     })),
     rows: state.rows,
     cols: state.cols,
     board: state.board,
     room: state.room,
     pieceCount: pieceCount.value,
+    tableName: state.tableName,
     savedAt: new Date().toISOString(),
   };
 
@@ -643,8 +741,9 @@ async function restore() {
     state.cols = saved.cols;
     state.board = saved.board;
     state.room = state.room || saved.room || makeRoomCode();
+    if (saved.tableName) updateTableName(saved.tableName);
     pieceCount.value = saved.pieceCount || String(saved.pieces.length);
-    roomCode.textContent = state.room;
+    updateRoomDisplay();
     emptyState.classList.add("hidden");
     fileName.textContent = "Foto guardada recuperada";
     updateProgress();
@@ -688,6 +787,23 @@ imageInput.addEventListener("change", async (event) => {
 
 createPuzzle.addEventListener("click", startPuzzle);
 restorePuzzle.addEventListener("click", restore);
+
+applyRoom.addEventListener("click", () => {
+  const nextTableName = tableNameInput.value.trim() || "Puzle a Distancia";
+  const nextRoom = normalizeRoom(roomInput.value);
+  const roomChanged = nextRoom !== state.room;
+  updateTableName(nextTableName, true);
+
+  if (roomChanged) {
+    state.room = nextRoom;
+    updateRoomDisplay();
+    saveSettings();
+    initRealtime(nextRoom, state.invitedByUrl ? "guest" : "host");
+    setSyncStatus("Sala actualizada: copia el nuevo link");
+  } else {
+    saveStatus.textContent = "Nombre de mesa guardado";
+  }
+});
 
 resetPuzzle.addEventListener("click", () => {
   localStorage.removeItem(STORAGE_KEY);
@@ -756,6 +872,7 @@ canvas.addEventListener("pointerup", () => {
       x: piece.x,
       y: piece.y,
       locked: piece.locked,
+      lockedBy: piece.lockedBy,
     });
     state.selectedId = null;
     scheduleSave();
@@ -827,6 +944,7 @@ function escapeHtml(value) {
 
 function appendChatMessage(name, text) {
   const item = document.createElement("p");
+  item.className = name === getPlayerName() ? "own" : "partner";
   item.innerHTML = `<strong>${escapeHtml(name)}</strong> ${escapeHtml(text)}`;
   chatMessages.appendChild(item);
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -844,6 +962,7 @@ chatForm.addEventListener("submit", (event) => {
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("beforeunload", persist);
 
+restoreSettings();
 initRealtime();
 resizeCanvas();
 if (state.role === "host") restore();
