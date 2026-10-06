@@ -25,6 +25,7 @@ const applyRoom = document.querySelector("#applyRoom");
 const zoomIn = document.querySelector("#zoomIn");
 const zoomOut = document.querySelector("#zoomOut");
 const centerBoard = document.querySelector("#centerBoard");
+const gatherPieces = document.querySelector("#gatherPieces");
 const musicToggle = document.querySelector("#musicToggle");
 const celebrateButton = document.querySelector("#celebrateButton");
 const placedCount = document.querySelector("#placedCount");
@@ -410,6 +411,18 @@ async function handleRealtimeData(message) {
     draw();
   }
 
+  if (message.type === "gather") {
+    for (const incoming of message.payload.pieces || []) {
+      const piece = state.pieces.find((item) => item.id === incoming.id);
+      if (!piece || piece.locked) continue;
+      piece.x = incoming.x;
+      piece.y = incoming.y;
+    }
+    draw();
+    persist();
+    saveStatus.textContent = "Piezas ordenadas en la sala";
+  }
+
   if (message.type === "reset") {
     localStorage.removeItem(STORAGE_KEY);
     state.imageData = "";
@@ -622,22 +635,20 @@ function createPieces(total) {
 
   const pieceW = state.board.width / cols;
   const pieceH = state.board.height / rows;
-  const spreadLeft = 28;
-  const spreadTop = 46;
-  const spreadWidth = Math.max(210, state.board.x - 72);
-  const spreadHeight = Math.max(360, canvas.clientHeight - 120);
+  const slots = getLoosePieceSlots(pieceW, pieceH, rows * cols);
 
   state.pieces = Array.from({ length: rows * cols }, (_, id) => {
     const row = Math.floor(id / cols);
     const col = id % cols;
     const targetX = state.board.x + col * pieceW;
     const targetY = state.board.y + row * pieceH;
+    const slot = slots[id % slots.length];
     return {
       id,
       row,
       col,
-      x: spreadLeft + Math.random() * spreadWidth,
-      y: spreadTop + Math.random() * spreadHeight,
+      x: slot.x + (Math.random() - 0.5) * Math.min(18, pieceW * 0.35),
+      y: slot.y + (Math.random() - 0.5) * Math.min(18, pieceH * 0.35),
       targetX,
       targetY,
       width: pieceW,
@@ -647,6 +658,78 @@ function createPieces(total) {
       lockedByRole: null,
     };
   });
+}
+
+function getLoosePieceSlots(pieceW, pieceH, count) {
+  const margin = 24;
+  const gapX = Math.max(10, Math.min(18, pieceW * 0.55));
+  const gapY = Math.max(10, Math.min(18, pieceH * 0.55));
+  const regions = [
+    {
+      x: margin,
+      y: margin,
+      width: Math.max(0, state.board.x - margin * 2 - pieceW),
+      height: Math.max(0, canvas.clientHeight - margin * 2 - pieceH),
+    },
+    {
+      x: state.board.x + state.board.width + margin,
+      y: margin,
+      width: Math.max(0, canvas.clientWidth - state.board.x - state.board.width - margin * 2 - pieceW),
+      height: Math.max(0, canvas.clientHeight - margin * 2 - pieceH),
+    },
+    {
+      x: margin,
+      y: state.board.y + state.board.height + margin,
+      width: Math.max(0, canvas.clientWidth - margin * 2 - pieceW),
+      height: Math.max(0, canvas.clientHeight - state.board.y - state.board.height - margin * 2 - pieceH),
+    },
+  ].filter((region) => region.width >= pieceW * 0.4 && region.height >= pieceH * 0.4);
+
+  const fallback = [{ x: margin, y: margin, width: Math.max(pieceW, canvas.clientWidth - margin * 2), height: Math.max(pieceH, canvas.clientHeight - margin * 2) }];
+  const usableRegions = regions.length ? regions : fallback;
+  const slots = [];
+
+  for (const region of usableRegions) {
+    const cols = Math.max(1, Math.floor(region.width / (pieceW + gapX)));
+    const rows = Math.max(1, Math.floor(region.height / (pieceH + gapY)));
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        slots.push({
+          x: region.x + col * (pieceW + gapX),
+          y: region.y + row * (pieceH + gapY),
+        });
+      }
+    }
+  }
+
+  while (slots.length < count) {
+    const region = usableRegions[slots.length % usableRegions.length];
+    slots.push({
+      x: region.x + Math.random() * Math.max(1, region.width),
+      y: region.y + Math.random() * Math.max(1, region.height),
+    });
+  }
+
+  return slots.sort(() => Math.random() - 0.5);
+}
+
+function gatherLoosePieces(announce = true) {
+  if (!state.image || !state.pieces.length) return;
+  const loose = state.pieces.filter((piece) => !piece.locked);
+  if (!loose.length) {
+    saveStatus.textContent = "No quedan piezas sueltas";
+    return;
+  }
+
+  const slots = getLoosePieceSlots(loose[0].width, loose[0].height, loose.length);
+  loose.forEach((piece, index) => {
+    piece.x = slots[index].x;
+    piece.y = slots[index].y;
+  });
+  draw();
+  scheduleSave();
+  saveStatus.textContent = "Piezas sueltas ordenadas";
+  if (announce) sendRealtime("gather", { pieces: loose.map(({ id, x, y }) => ({ id, x, y })) });
 }
 
 async function startPuzzle() {
@@ -1236,6 +1319,8 @@ centerBoard.addEventListener("click", () => {
   state.scale = 1;
   draw();
 });
+
+gatherPieces.addEventListener("click", () => gatherLoosePieces(true));
 
 musicToggle.addEventListener("click", toggleMusic);
 
